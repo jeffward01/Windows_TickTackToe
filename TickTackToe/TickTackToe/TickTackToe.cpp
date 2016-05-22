@@ -125,6 +125,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //Global varibles for game
 const int CELL_SIZE = 100;
+HBRUSH hbr1, hbr2;
+int playerTurn =1;
+int gameBoard[9] = { 0,0,0,0,0,0,0,0,0 };
+int winner = 0;
+int wins[3];
 
 //Gets Game Board size
 BOOL GetGameBoardRect(HWND hwnd, RECT * pRect)
@@ -179,6 +184,53 @@ int GetCellNumberFromPoint(HWND hwnd, int x, int y)
 	return -1;	//outside game board or failure
 }
 
+void whiteBrush()
+{
+	(HBRUSH)GetStockObject(WHITE_BRUSH);
+}
+
+//Returns:
+// 0 - no winner
+// 1 - player 1 wins
+// 2 - player 2 wins
+// 3 - draw
+int GetWinner(int wins[3])
+{
+	//list of possible wining combinations
+	int cells[] = {0,1,2   ,3,4,5,  6,7,8,  0,3,6,  1,4,7,  2,5,8,  0,4,8,  2,4,6};
+
+	
+	for (int i = 0; i < ARRAYSIZE(cells); i+=3)
+	{
+		if ((0!=gameBoard[cells[i]]) && gameBoard[cells[i]] == gameBoard[cells [i+ 1]] && gameBoard[cells[i]] == gameBoard[cells[i + 2]])
+		{
+			//We have a winner
+			wins[0] = cells[i];
+			wins[1] = cells[i + 1];
+			wins[2] = cells[i + 2];
+
+			return gameBoard[cells[i]];
+		}
+	}
+
+	//see if any cells are left open
+	for (int i = 0; i < ARRAYSIZE(gameBoard); i++)
+	{
+		if (gameBoard[i] == 0)
+		{
+			//Continue to play
+			return 0;
+		}
+		return 3;
+	}
+
+
+
+
+}
+
+
+
 //Get cell dimensions
 BOOL GetCellRect(HWND hWnd, int index, RECT * pRect)
 {
@@ -210,6 +262,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
+	case WM_CREATE:
+	{
+		//Create red brush
+		hbr1 = CreateSolidBrush(RGB(255, 0, 0));
+		//Create blue brush
+		hbr2 = CreateSolidBrush(RGB(0, 0, 255));
+	}
 	case WM_COMMAND:
 	{
 		int wmId = LOWORD(wParam);
@@ -234,25 +293,59 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int xPos = GET_X_LPARAM(lParam);
 		int yPos = GET_Y_LPARAM(lParam);
 
+		//only handle clicks if it is a player turn.  (ie: 1 or 2)
+		if (playerTurn == 0)
+		{
+			break;
+		}
+
 		int index = GetCellNumberFromPoint(hWnd, xPos, yPos);
 		
 		HDC hdc = GetDC(hWnd);
 		if (hdc != NULL)
 		{
-			WCHAR temp[100];
-
-			wsprintf(temp, L"Index = %d", index);
-			TextOut(hdc, xPos, yPos, temp, lstrlen(temp));
+			//__Output Cell index on click
+			//WCHAR temp[100];
+			//wsprintf(temp, L"Index = %d", index);
+			//TextOut(hdc, xPos, yPos, temp, lstrlen(temp));
 			
 
 			//Get cell dimension from its index
 			if (index != -1)
 			{
 				RECT rcCell;
-				if (GetCellRect(hWnd, index, &rcCell))
+				if ((gameBoard[index] == 0) && GetCellRect(hWnd, index, &rcCell))
 				{
-					FillRect(hdc, &rcCell, (HBRUSH)GetStockObject(WHITE_BRUSH));
+					//make cell 'unselectable'
+					gameBoard[index] = playerTurn;
+
+					FillRect(hdc, &rcCell, (playerTurn==1) ? hbr1 : hbr2);
+
+					//Check for winner
+					winner = GetWinner(wins);
+					if (winner == 1 || winner == 2)
+					{
+						//we have a winner, display message box
+						MessageBox(hWnd, (winner == 1) ? L"Player 1 is the winner!" : L"Player 2 is the winner!",
+							L"You Win!", MB_OK | MB_ICONINFORMATION);
+						playerTurn = 0;
+					}
+					else if(winner == 3)
+					{
+						//its a draw	
+						MessageBox(hWnd,L"Cats game! No one wins this time!",L"Its a Draw!", MB_OK | MB_ICONEXCLAMATION);
+						playerTurn = 0;
+					}
+					else
+					{
+						//Alternate player turn between one and two
+						playerTurn = (playerTurn == 1) ? 2 : 1;
+					}
+
+
+					
 				}
+				
 			}
 			ReleaseDC(hWnd, hdc);
 		}
@@ -271,36 +364,50 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	break;
 
+	//This builds/draws the window
 	case WM_PAINT:
 	{
 		//This builds/draws the window
 		PAINTSTRUCT ps;
 		//define window?
 		HDC hdc = BeginPaint(hWnd, &ps);
-		//defeine rectangle?
+		//defeine rectangle
 		RECT rc;
 
 		// TODO: Add any drawing code that uses hdc here...
 		if (GetGameBoardRect(hWnd, &rc))
 		{
 			FillRect(hdc, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH)); // <- Draws white square with no border
-			//Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);  //draw white rectangle with black border
-		}
+			
+			for (int i = 0; i < 4; i++)
+			{
 
-		for (int i = 0; i < 4; i++)
-		{
+				//Draw Vertical lines
+				DrawLine(hdc, rc.left + CELL_SIZE * i, rc.top, rc.left + CELL_SIZE * i, rc.bottom);
 
-			//Draw Vertical lines
-			DrawLine(hdc, rc.left + CELL_SIZE * i, rc.top, rc.left + CELL_SIZE * i, rc.bottom);
+				//Draw Horizontal lines
+				DrawLine(hdc, rc.left, rc.top + CELL_SIZE * i, rc.right, rc.top + CELL_SIZE * i);
+			}
 
-			//Draw Horizontal lines
-			DrawLine(hdc, rc.left, rc.top + CELL_SIZE * i, rc.right, rc.top + CELL_SIZE * i);
+			//refill boards colored cells on window resize
+			//draw all occupied cells
+			RECT rcCell;
+			for (int i = 0; i < ARRAYSIZE(gameBoard); i++)
+			{
+				if ((gameBoard[i] != 0)&&GetCellRect(hWnd, i, &rcCell))
+				{
+					FillRect(hdc, &rcCell, (gameBoard[i] == 2) ? hbr2 : hbr1);
+				}
+			}
 		}
 
 		EndPaint(hWnd, &ps);
 	}
 	break;
 	case WM_DESTROY:
+		//clear brushes from memory
+		DeleteObject(hbr1);
+		DeleteObject(hbr2);
 		PostQuitMessage(0);
 		break;
 	default:
