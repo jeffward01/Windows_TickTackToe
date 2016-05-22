@@ -130,11 +130,8 @@ const int CELL_SIZE = 100;
 BOOL GetGameBoardRect(HWND hwnd, RECT * pRect)
 {
 	RECT rc;
-
-	// TODO: Add any drawing code that uses hdc here...
 	if (GetClientRect(hwnd, &rc))
 	{
-		//This creates and centers the game board
 		int width = rc.right - rc.left;
 		int height = rc.bottom - rc.top;
 
@@ -156,30 +153,30 @@ void DrawLine(HDC hdc, int x1, int y1, int x2, int y2)
 	MoveToEx(hdc, x1, y1, NULL);
 	LineTo(hdc, x2, y2);
 }
-	
+
 //Click handler for game board/Cell positon
 int GetCellNumberFromPoint(HWND hwnd, int x, int y)
 {
+	POINT pt = { x, y };
 	RECT rc;
-	POINT pt = { x ,y };
-		
+
 	if (GetGameBoardRect(hwnd, &rc))
 	{
 		if (PtInRect(&rc, pt))
 		{
-			//User clicked inside game board
-			//Normalize ( 0 to 3 * CELL_SIZE)
+			//user clicked inside game board
+			//Normalize ( 0 to 3*CELL_SIZE)
 			x = pt.x - rc.left;
 			y = pt.y - rc.top;
 
 			int column = x / CELL_SIZE;
 			int row = y / CELL_SIZE;
 
-			//convert to index ( 0 to 8 )
+			//convert to index ( 0 to 8)
 			return column + row * 3;
 		}
 	}
-	return -1; //click outside the board or failure
+	return -1;	//outside game board or failure
 }
 
 //Get cell dimensions
@@ -189,23 +186,23 @@ BOOL GetCellRect(HWND hWnd, int index, RECT * pRect)
 
 	SetRectEmpty(pRect);
 	if (index < 0 || index > 8)
-	{
 		return FALSE;
-	}
 
 	if (GetGameBoardRect(hWnd, &rcBoard))
 	{
-		int y = index / 3; //Row number
-		int x = index % 3; // Column Number
+		//Convert index from 0 to 8 into x,y pair
+		int y = index / 3;  //Row number
+		int x = index % 3;	// Column number
 
-
-		pRect->left = rcBoard.left + x * CELL_SIZE;
-		pRect->top = rcBoard.top + y * CELL_SIZE;
-		pRect->right = pRect->left + CELL_SIZE;
-		pRect->bottom = pRect->top + CELL_SIZE;
+		pRect->left = rcBoard.left + x * CELL_SIZE + 1;
+		pRect->top = rcBoard.top + y * CELL_SIZE + 1;
+		pRect->right = pRect->left + CELL_SIZE - 1;
+		pRect->bottom = pRect->top + CELL_SIZE - 1;
 
 		return TRUE;
 	}
+
+	return FALSE;
 }
 
 
@@ -254,7 +251,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				RECT rcCell;
 				if (GetCellRect(hWnd, index, &rcCell))
 				{
-					FillRect(hdc, &rcCell, (HBRUSH)GetStockObject(BLACK_BRUSH));
+					FillRect(hdc, &rcCell, (HBRUSH)GetStockObject(WHITE_BRUSH));
 				}
 			}
 			ReleaseDC(hWnd, hdc);
@@ -262,12 +259,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		
 
 	}
+	break;
 	case WM_GETMINMAXINFO:
 	{
-		//This prevents the window from being sized smalled than a 5x5
 		MINMAXINFO * pMinMax = (MINMAXINFO*)lParam;
-		pMinMax->ptMinTrackSize.x = CELL_SIZE * 5;
-		pMinMax->ptMinTrackSize.y = CELL_SIZE * 5;
+		if (pMinMax != NULL)
+		{
+			pMinMax->ptMinTrackSize.x = CELL_SIZE * 5;
+			pMinMax->ptMinTrackSize.y = CELL_SIZE * 5;
+		}
 	}
 	break;
 
