@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "TickTackToe.h"
+#include <windowsx.h>
 
 #define MAX_LOADSTRING 100
 
@@ -125,6 +126,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //Global varibles for game
 const int CELL_SIZE = 100;
 
+//Gets Game Board size
 BOOL GetGameBoardRect(HWND hwnd, RECT * pRect)
 {
 	RECT rc;
@@ -155,6 +157,56 @@ void DrawLine(HDC hdc, int x1, int y1, int x2, int y2)
 	LineTo(hdc, x2, y2);
 }
 	
+//Click handler for game board/Cell positon
+int GetCellNumberFromPoint(HWND hwnd, int x, int y)
+{
+	RECT rc;
+	POINT pt = { x ,y };
+		
+	if (GetGameBoardRect(hwnd, &rc))
+	{
+		if (PtInRect(&rc, pt))
+		{
+			//User clicked inside game board
+			//Normalize ( 0 to 3 * CELL_SIZE)
+			x = pt.x - rc.left;
+			y = pt.y - rc.top;
+
+			int column = x / CELL_SIZE;
+			int row = y / CELL_SIZE;
+
+			//convert to index ( 0 to 8 )
+			return column + row * 3;
+		}
+	}
+	return -1; //click outside the board or failure
+}
+
+//Get cell dimensions
+BOOL GetCellRect(HWND hWnd, int index, RECT * pRect)
+{
+	RECT rcBoard;
+
+	SetRectEmpty(pRect);
+	if (index < 0 || index > 8)
+	{
+		return FALSE;
+	}
+
+	if (GetGameBoardRect(hWnd, &rcBoard))
+	{
+		int y = index / 3; //Row number
+		int x = index % 3; // Column Number
+
+
+		pRect->left = rcBoard.left + x * CELL_SIZE;
+		pRect->top = rcBoard.top + y * CELL_SIZE;
+		pRect->right = pRect->left + CELL_SIZE;
+		pRect->bottom = pRect->top + CELL_SIZE;
+
+		return TRUE;
+	}
+}
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -178,6 +230,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	break;
+
+	//This handles mouse clicks
+	case WM_LBUTTONDOWN:
+	{
+		int xPos = GET_X_LPARAM(lParam);
+		int yPos = GET_Y_LPARAM(lParam);
+
+		int index = GetCellNumberFromPoint(hWnd, xPos, yPos);
+		
+		HDC hdc = GetDC(hWnd);
+		if (hdc != NULL)
+		{
+			WCHAR temp[100];
+
+			wsprintf(temp, L"Index = %d", index);
+			TextOut(hdc, xPos, yPos, temp, lstrlen(temp));
+			
+
+			//Get cell dimension from its index
+			if (index != -1)
+			{
+				RECT rcCell;
+				if (GetCellRect(hWnd, index, &rcCell))
+				{
+					FillRect(hdc, &rcCell, (HBRUSH)GetStockObject(BLACK_BRUSH));
+				}
+			}
+			ReleaseDC(hWnd, hdc);
+		}
+		
+
+	}
 	case WM_GETMINMAXINFO:
 	{
 		//This prevents the window from being sized smalled than a 5x5
