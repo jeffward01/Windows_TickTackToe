@@ -51,5 +51,11 @@
     <Image Include="TickTackToe.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="..\..\..\TickTackToe_WindowsApp_EX\TicTacToe_cpp_complete\TicTacToe\vial.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\..\TickTackToe_WindowsApp_EX\TicTacToe_cpp_complete\TicTacToe\icon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

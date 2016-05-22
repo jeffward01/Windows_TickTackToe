@@ -163,6 +163,8 @@
     <ResourceCompile Include="TickTackToe.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\TickTackToe_WindowsApp_EX\TicTacToe_cpp_complete\TicTacToe\icon.ico" />
+    <Image Include="..\..\..\TickTackToe_WindowsApp_EX\TicTacToe_cpp_complete\TicTacToe\vial.ico" />
     <Image Include="small.ico" />
     <Image Include="TickTackToe.ico" />
   </ItemGroup>

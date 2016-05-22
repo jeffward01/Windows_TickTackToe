@@ -126,6 +126,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //Global varibles for game
 const int CELL_SIZE = 100;
 HBRUSH hbr1, hbr2;
+HICON hIcon1, hIcon2;
 int playerTurn =1;
 int gameBoard[9] = { 0,0,0,0,0,0,0,0,0 };
 int winner = 0;
@@ -225,7 +226,17 @@ int GetWinner(int wins[3])
 	}
 }
 
-
+void DrawIconCentered(HDC hdc, RECT * pRect, HICON hIcon)
+{
+	const int ICON_WIDTH = 32;
+	const int ICON_HEIGHT = 32;
+	if (NULL != pRect)
+	{
+		int left = pRect->left + (pRect->right - pRect->left - ICON_WIDTH)/2;
+		int top = pRect->top + ((pRect->bottom - pRect->top)- ICON_HEIGHT)/2;
+		DrawIcon(hdc, left, top, hIcon);
+	}
+}
 
 //Get cell dimensions
 BOOL GetCellRect(HWND hWnd, int index, RECT * pRect)
@@ -254,6 +265,41 @@ BOOL GetCellRect(HWND hWnd, int index, RECT * pRect)
 }
 
 
+void ShowTurn(HWND hWnd, HDC hdc)
+{
+	static const WCHAR szTurn1[] = L"Turn: Player 1";
+	static const WCHAR szTurn2[] = L"Turn: Player 2";
+	RECT rc;
+	const WCHAR * pszTurnText = NULL;
+
+	switch (winner)
+	{
+	case 0: //continue to play
+		pszTurnText = (playerTurn == 1) ? szTurn1 : szTurn2;
+		break;
+	case 1: //Player 1 wins
+		pszTurnText = L"Player 1 is the winner!! WOW!";
+		break;
+	case 2: //Player 2 wins
+		pszTurnText = L"Player 2 is the winner!! WOW!";
+		break;
+	case 3: //Its a draw
+		pszTurnText = L"It's a draw!!";
+		break;
+	}
+
+
+	if (NULL != GetClientRect(hWnd, &rc))
+	{
+		rc.top = rc.bottom - 48; 
+		FillRect(hdc, &rc, (HBRUSH)GetStockObject(GRAY_BRUSH));
+		SetTextColor(hdc, RGB(255, 255, 255));
+		SetBkMode(hdc, TRANSPARENT);
+		DrawText(hdc, pszTurnText, lstrlen(pszTurnText), &rc, DT_CENTER);
+	}
+}
+
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -264,6 +310,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		hbr1 = CreateSolidBrush(RGB(255, 0, 0));
 		//Create blue brush
 		hbr2 = CreateSolidBrush(RGB(0, 0, 255));
+
+		//Load Player Icons
+		hIcon1 = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAYER1));
+		hIcon2 = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAYER2));
 	}
 	case WM_COMMAND:
 	{
@@ -333,7 +383,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					//make cell 'unselectable'
 					gameBoard[index] = playerTurn;
 
-					FillRect(hdc, &rcCell, (playerTurn==1) ? hbr1 : hbr2);
+					//FillRect(hdc, &rcCell, (playerTurn==1) ? hbr1 : hbr2);
+					DrawIconCentered(hdc, &rcCell, (playerTurn == 1) ? hIcon1 : hIcon2);
 
 					//Check for winner
 					winner = GetWinner(wins);
@@ -350,16 +401,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						MessageBox(hWnd,L"Cats game! No one wins this time!",L"Its a Draw!", MB_OK | MB_ICONEXCLAMATION);
 						playerTurn = 0;
 					}
-					else
+					else if (winner == 0)
 					{
 						//Alternate player turn between one and two
 						playerTurn = (playerTurn == 1) ? 2 : 1;
 					}
-
-
-					
+					//Display Turn
+					ShowTurn(hWnd, hdc);
 				}
-				
 			}
 			ReleaseDC(hWnd, hdc);
 		}
@@ -392,7 +441,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (GetGameBoardRect(hWnd, &rc))
 		{
 			RECT rcClient;
-
+		
+			//Display player text and turn
+			
 			if (GetClientRect(hWnd, &rcClient))
 			{
 				const WCHAR szPlayer1 [] = L"Player 1";
@@ -406,6 +457,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				TextOut(hdc, 16, 16, szPlayer1, ARRAYSIZE(szPlayer1));
 				SetTextColor(hdc, RGB(0, 0, 255));
 				TextOut(hdc, rcClient.right - 72, 16, szPlayer2, ARRAYSIZE(szPlayer2));
+
+				//Display turn
+				ShowTurn(hWnd, hdc);
 			}
 
 
@@ -428,7 +482,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				if ((gameBoard[i] != 0)&&GetCellRect(hWnd, i, &rcCell))
 				{
-					FillRect(hdc, &rcCell, (gameBoard[i] == 2) ? hbr2 : hbr1);
+					//FillRect(hdc, &rcCell, (gameBoard[i] == 2) ? hbr2 : hbr1);
+					DrawIconCentered(hdc, &rcCell, (gameBoard[i] == 1) ? hIcon1 : hIcon2);
 				}
 			}
 		}
@@ -440,6 +495,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		//clear brushes from memory
 		DeleteObject(hbr1);
 		DeleteObject(hbr2);
+		DestroyIcon(hIcon1);
+		DestroyIcon(hIcon2);
 		PostQuitMessage(0);
 		break;
 	default:
