@@ -391,6 +391,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// TODO: Add any drawing code that uses hdc here...
 		if (GetGameBoardRect(hWnd, &rc))
 		{
+			RECT rcClient;
+
+			if (GetClientRect(hWnd, &rcClient))
+			{
+				const WCHAR szPlayer1 [] = L"Player 1";
+				const WCHAR szPlayer2 [] = L"Player 2";	
+
+				SetBkMode(hdc, TRANSPARENT);
+
+				
+					//Draw player 1 and player 2
+				SetTextColor(hdc, RGB(255, 255, 0));
+				TextOut(hdc, 16, 16, szPlayer1, ARRAYSIZE(szPlayer1));
+				SetTextColor(hdc, RGB(0, 0, 255));
+				TextOut(hdc, rcClient.right - 72, 16, szPlayer2, ARRAYSIZE(szPlayer2));
+			}
+
+
 			FillRect(hdc, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH)); // <- Draws white square with no border
 			
 			for (int i = 0; i < 4; i++)
