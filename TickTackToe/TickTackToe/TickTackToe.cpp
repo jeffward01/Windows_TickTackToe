@@ -223,10 +223,6 @@ int GetWinner(int wins[3])
 		}
 		return 3;
 	}
-
-
-
-
 }
 
 
@@ -275,6 +271,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// Parse the menu selections:
 		switch (wmId)
 		{
+		case ID_FILE_NEWGAME:
+		{
+			int ret = MessageBox(hWnd, L"Are you sure you would like to start a new game?", L"New Game", MB_YESNO | MB_ICONQUESTION);
+			//if user wants to start a new game:
+			if (IDYES == ret)
+			{
+				//reset game
+				playerTurn = 1;
+				winner = 0;
+				ZeroMemory(gameBoard, sizeof(gameBoard));
+
+				//force a paint message
+				InvalidateRect(hWnd, NULL, TRUE); //post a WM_PAINT to our windowProc, its put in the message queue
+				UpdateWindow(hWnd); //forces immediate handling of WM_Paint
+			}
+		}
+		break;
+
 		case IDM_ABOUT:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
